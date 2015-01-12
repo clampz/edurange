@@ -2,13 +2,59 @@
 # as hooks, called dynamically by the {Provider} concern when {Scenario}, {Cloud}, {Subnet}, and {Instance} are booted.
 # @see Provider#boot
 require 'active_support'
-require 'pry'
 module Aws
   extend ActiveSupport::Concern
 
   # This method does nothing, but must be defined as the hook is called regardless
   # @return [nil]
   def aws_scenario_boot
+  end
+
+  # reads the security group rules
+  # and applies them to the cloud
+  def aws_scenario_apply_sg_rules
+    Cloud.first.egress_rules.each do |rule_params|
+      # for each egress allow rule we need a cidr so we confirm that it is present.
+      next if rule_params["CIDR"] == nil
+      case 
+        when rule_params["Protocol"] == nil && rule_params["Ports"] == nil
+          Cloud.first.aws_cloud_driver_object.security_groups.first.authorize_egress(rule_params["CIDR"])
+        when rule_params["Protocol"] == nil && rule_params["Ports"] != nil
+          if (rule_params["Ports"].split("..").length > 1) then
+            ports = rule_params["Ports"].split("..")
+            Cloud.first.aws_cloud_driver_object.security_groups.first.authorize_egress(rule_params["CIDR"], :ports => ports[0].to_i..ports[1].to_i)
+          else
+            Cloud.first.aws_cloud_driver_object.security_groups.first.authorize_egress(rule_params["CIDR"], rule_params["Ports"].to_i)
+          end
+        else
+          if (rule_params["Ports"].split("..").length > 1) then
+            ports = rule_params["Ports"].split("..")
+            Cloud.first.aws_cloud_driver_object.security_groups.first.authorize_egress(rule_params["CIDR"], :protocol => if rule_params["Protocol"] == "tcp" then :tcp else :udp end, :ports => ports[0].to_i..ports[1].to_i)
+          else
+            Cloud.first.aws_cloud_driver_object.security_groups.first.authorize_egress(rule_params["CIDR"], :protocol => if rule_params["Protocol"] == "tcp" then :tcp else :udp end, :ports => rule_params["Ports"].to_i)
+          end
+      end
+    end
+    Cloud.first.ingress_rules.each do |rule_params|
+      # for each ingress allow rule we must confirm that protocol and port are present
+      next if rule_params["Protocol"] == nil || rule_params["Ports"] == nil
+      case 
+        when rule_params["CIDR"] != nil && rule_params["Protocol"] != nil && rule_params["Ports"] != nil
+          if (rule_params["Ports"].split("..").length > 1) then
+            ports = rule_params["Ports"].split("..")
+            Cloud.first.aws_cloud_driver_object.security_groups.first.authorize_ingress(rule_params["Protocol"], ports[0].to_i..ports[1].to_i, rule_params["CIDR"])
+          else
+            Cloud.first.aws_cloud_driver_object.security_groups.first.authorize_ingress(rule_params["Protocol"], rule_params["Ports"].to_i, rule_params["CIDR"])
+          end
+        else
+          if (rule_params["Ports"].split("..").length > 1) then
+            ports = rule_params["Ports"].split("..")
+            Cloud.first.aws_cloud_driver_object.security_groups.first.authorize_ingress(rule_params["Protocol"], ports[0].to_i..ports[1].to_i)
+          else
+            Cloud.first.aws_cloud_driver_object.security_groups.first.authorize_ingress(rule_params["Protocol"], rule_params["Ports"].to_i)
+          end
+      end
+    end
   end
 
   # This method loops through each subnet and creates a route table for it.
@@ -36,22 +82,15 @@ module Aws
       end
     end
 
-    Cloud.ingress_rules.each do |rulehash|
-      Cloud.first.aws_cloud_driver_object.security_groups.first.authorize_ingress(rulehash["Protocol"], rulehash["Ports"], rulehash["CIDR"])
-    end
-    Cloud.egress_rules.each do |rulehash|
-      Cloud.first.aws_cloud_driver_object.security_groups.first.authorize_egress(rulehash["CIDR"])
-    end
     # Hardcoded firewall rules - TODO
-    #Cloud.first.aws_cloud_driver_object.security_groups.first.authorize_ingress(:tcp, 20..8080) #enable all traffic inbound from port 20 - 8080 (most we care about)
-    #Cloud.first.aws_cloud_driver_object.security_groups.first.revoke_egress('0.0.0.0/0') # Disable all outbound
-    #Cloud.first.aws_cloud_driver_object.security_groups.first.authorize_egress('0.0.0.0/0', protocol: :tcp, ports: 80)  # Enable port 80 outbound
-    #Cloud.first.aws_cloud_driver_object.security_groups.first.authorize_egress('0.0.0.0/0', protocol: :tcp, ports: 443) # Enable port 443 outbound
+#    Cloud.first.aws_cloud_driver_object.security_groups.first.authorize_ingress(:tcp, 20..8080) #enable all traffic inbound from port 20 - 8080 (most we care about)
+#    Cloud.first.aws_cloud_driver_object.security_groups.first.revoke_egress('0.0.0.0/0') # Disable all outbound
+#    Cloud.first.aws_cloud_driver_object.security_groups.first.authorize_egress('0.0.0.0/0', protocol: :tcp, ports: 80)  # Enable port 80 outbound
+#    Cloud.first.aws_cloud_driver_object.security_groups.first.authorize_egress('0.0.0.0/0', protocol: :tcp, ports: 443) # Enable port 443 outbound
     # TODO -- SECURITY -- delayed job in 20 min disable firewall.
-    #Cloud.first.aws_cloud_driver_object.security_groups.first.authorize_egress('10.0.0.0/16') # enable all traffic outbound to subnets
+#    Cloud.first.aws_cloud_driver_object.security_groups.first.authorize_egress('10.0.0.0/16') # enable all traffic outbound to subnets
 
-    #binding.pry
-    # isolate subnets (w. outbound rules) and allow whitelist of ips
+    aws_scenario_apply_sg_rules
 
   end
 
