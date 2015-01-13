@@ -24,7 +24,7 @@ module Aws
             ports = rule_params["Ports"].split("..")
             Cloud.first.aws_cloud_driver_object.security_groups.first.authorize_egress(rule_params["CIDR"], :ports => ports[0].to_i..ports[1].to_i)
           else
-            Cloud.first.aws_cloud_driver_object.security_groups.first.authorize_egress(rule_params["CIDR"], rule_params["Ports"].to_i)
+            Cloud.first.aws_cloud_driver_object.security_groups.first.authorize_egress(rule_params["CIDR"], :ports => rule_params["Ports"].to_i)
           end
         else
           if (rule_params["Ports"].split("..").length > 1) then
