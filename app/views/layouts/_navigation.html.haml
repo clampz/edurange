@@ -1,12 +1,24 @@
--# navigation styled for Bootstrap 3.0
-%nav.navbar
-  .container
-    .navbar-header
-      %span.icon-bar
-      %span.icon-bar
-      %span.icon-bar
-    .collapse.navbar-collapse
-      %ul.nav.navbar-nav.drop
-        = render 'layouts/navigation_links'
 
-//animation is animated.drop
+%nav.navbar.navbar-default
+  %a.navbar-brand
+    EDURange
+
+  %ul.nav.nav-tabs
+
+    - if current_user
+      %li{role: 'presentation', class: (params[:controller] == 'instructor' or params[:controller] == 'admin') ? "active" : "" }
+        = link_to 'Home', root_path
+
+      - if User.find(current_user.id).is_instructor? or User.find(current_user.id).is_admin?
+
+        %li{role: 'presentation', class: params[:controller] == 'scenarios' ? "active" : "" }
+          = link_to 'Scenarios', scenarios_path
+
+        %li{role: 'presentation', class: params[:controller] == 'statistics' ? "active" : "" }
+          = link_to 'Statistics', statistics_path
+
+        %li{role: 'presentation', class: params[:controller] == 'tutorials' ? "active" : "" }
+          = link_to 'Tutorials', tutorials_path
+
+      %li{role: 'presentation'}
+        = link_to 'Sign Out', destroy_user_session_path, :method => :delete

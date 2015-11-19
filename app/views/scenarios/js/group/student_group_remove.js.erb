@@ -1,0 +1,20 @@
+<% if @group.errors.any? %>
+	<% if @group.errors[:running].any? %>
+    $('#modal-group-student-group-remove').find('#help-div').addClass('has-error');
+    $('#modal-group-student-group-remove').find('#help-help').text('<%= @group.errors[:running][0] %>');
+  <% else %>
+    $('#modal-group-student-group-remove').find('#help-div').removeClass('has-error');
+    $('#modal-group-student-group-remove').find('#help-help').text('');
+  <% end %>
+<% else %>
+	$('#modal-group-student-group-remove').modal('toggle');
+	<% @players.each do |player| %>
+		<% if user = User.find(player.user_id) %>
+			$('#student-<%= user.id %>-answers').remove();
+		<% end %>
+		$('#player-<%= player.id %>').remove();
+	<% end %>
+	$('#save-button-li').removeClass('disabled');
+	$('#save-button').attr('href', '/scenarios/<%= @group.scenario.id %>/save');
+	update_flash("Removed student group '<%= @student_group_name %>' from group '<%= @group.name %>'");
+<% end %>

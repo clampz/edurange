@@ -1,0 +1,22 @@
+<% if @group.errors.any? %>
+	<% if @group.errors[:running].any? %>
+    $('#modal-group-student-group-add').find('#help-div').addClass('has-error');
+    $('#modal-group-student-group-add').find('#help-help').text('<%= @group.errors[:running][0] %>');
+  <% else %>
+    $('#modal-group-student-group-add').find('#help-div').removeClass('has-error');
+    $('#modal-group-student-group-add').find('#help-help').text('');
+  <% end %>
+<% else %>
+	$('#modal-group-student-group-add').modal('toggle');
+	<% @players.each do |player| %>
+		<% if player.user_id %>
+			<% if user = User.find(player.user_id) %>
+				$('#student-answers-table').append('<%= escape_javascript(render("/scenarios/show/student_answers_header", scenario: @group.scenario, user: user).delete("\n")).html_safe %>');
+			<% end %>
+		<% end %>
+		$('#group-<%= @group.id %>-players-table').append("<tr id='player-<%= player.id %>'><td><%= user ? user.name : '-' %></td><td><%= user ? user.email : '-' %></td><td><%= player.student_group.name %></td><td><%= player.login %></td><td><%= player.password %></td><td><a href='/scenarios/<%= player.group.scenario.id %>/group_player_delete?player_id=<%= player.id %>' data-method='post' rel='nofollow' data-remote='true' data-confirm='Are you sure? This will erase any answers to questions that the student has entered.'>delete</a></td>");
+	<% end %>
+	$('#save-button-li').removeClass('disabled');
+	$('#save-button').attr('href', '/scenarios/<%= @group.scenario.id %>/save');
+	update_flash("Added student group '<%= @student_group_name %>' to group '<%= @group.name %>'");
+<% end %>

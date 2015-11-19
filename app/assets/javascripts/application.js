@@ -14,7 +14,14 @@
 //= require jquery.turbolinks
 //= require jquery_ujs
 //= require bootstrap
-//= require private_pub
 //= require underscore
+//= require bootstrap
 //= require_tree .
 // require turbolinks
+
+function update_flash(message) {
+    if (!$('#flash_notice').length) {
+        $('main').prepend("<h5 class='alert alert-success'><btn class='btn-default close' type='button' data-dismiss='alert' aria-hidden='true'> x </btn><div id='flash_notice'></div></h5>");
+    }
+    $('#flash_notice').html(message);
+}

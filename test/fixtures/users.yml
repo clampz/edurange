@@ -1,0 +1,41 @@
+
+test1:
+  id: 1
+  name: test1
+  email: test@edurange.org
+  encrypted_password: <%= User.new.send(:password_digest, 'passwordfoo') %>
+
+admin1:
+  id: 2
+  name: admin1
+  email: admin1@edurange.org
+  encrypted_password: <%= User.new.send(:password_digest, 'passwordfoo') %>
+  role: 2
+
+student1:
+  id: 3
+  name: student1
+  email: student1@edurange.org
+  encrypted_password: <%= User.new.send(:password_digest, 'passwordfoo') %>
+  role: 4
+
+student2:
+  id: 4
+  name: student2
+  email: student2@edurange.org
+  encrypted_password: <%= User.new.send(:password_digest, 'passwordfoo') %>
+  role: 4
+
+instructor1:
+  id: 5
+  name: instructor1
+  email: instructor1@edurange.org
+  encrypted_password: <%= User.new.send(:password_digest, 'passwordfoo') %>
+  role: 3
+
+instructor999999999:
+  id: 999999999
+  name: instructor999999999
+  email: instructor999999999@edurange.org
+  encrypted_password: <%= User.new.send(:password_digest, 'passwordfoo') %>
+  role: 3

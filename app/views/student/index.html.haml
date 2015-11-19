@@ -1,0 +1,40 @@
+%div.panel.panel-default
+  %div.panel-heading.nav.nav-pills
+    %li
+      %h3 Student Home
+
+  %div.panel-body
+    %label Account Information: 
+    %div
+      %dl
+        Name: 
+        =@user.name
+        %br
+        Email:
+        =@user.email
+        %br
+        Password: ********
+        %p
+        = link_to 'edit', edit_user_registration_path, class: 'btn btn-primary'
+        %p
+        Last Sign In:
+        =@user.last_sign_in_at
+        From:
+        =@user.last_sign_in_ip
+
+    %label Scenarios:
+    %dl
+      %table.table
+        %tr
+          %th Name
+          %th Status
+          %th Instructor
+          %th
+        - @scenarios.each do |scenario|
+          %tr
+            %td= scenario.name
+            %td= scenario.status
+            %td= scenario.user.name
+            %td
+              %div.btn-group
+                = link_to 'Show', "student/#{scenario.id}", class: 'btn btn-default'

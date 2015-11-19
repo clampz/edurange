@@ -1,64 +1,130 @@
-MAX_CLOUD_CIDR_BLOCK = 16 # AWS Max. 16 == a /16 subnet. See CIDR notation
-MIN_CLOUD_CIDR_BLOCK = 28 # AWS Min
-
 # This file has a few validations, described below. It maintains state and
 # attributes corresponding to an AWS Virtual Private Cloud object.
 
 class Cloud < ActiveRecord::Base
   include Provider
   include Aws
+  include Cidr
 
   belongs_to :scenario
-  has_many :subnets, dependent: :delete_all
+  has_many :subnets, dependent: :destroy
+  has_one :user, through: :scenario
 
   # validations
+  validates :name, presence: true, uniqueness: { scope: :scenario, message: "name already taken" } 
 
-  validates_presence_of :name, :cidr_block, :scenario
-  validate :cidr_block_is_valid
-  # Validation function that ensures CIDR block provided is within min and max constants defined globally in this file.
-  # @return [nil]
-  def cidr_block_is_within_limits
-    our_cidr_block_nw = IPAddress(self.cidr_block).network
+  validates_presence_of :cidr_block, :scenario
+  validate :cidr_validate, :validate_stopped
 
-    max_cloud_size_nw = our_cidr_block_nw.clone
-    max_cloud_size_nw.prefix = MAX_CLOUD_CIDR_BLOCK
+  after_destroy :update_scenario_modified
+  before_destroy :validate_stopped, prepend: true
 
-    min_cloud_size_nw = our_cidr_block_nw.clone
-    min_cloud_size_nw.prefix = MIN_CLOUD_CIDR_BLOCK
-
-    unless max_cloud_size_nw.include? our_cidr_block_nw # Unless we're within max nw size
-      errors.add(:cidr_block, "must be smaller than #{max_cloud_size_nw}!")
+  def validate_stopped
+    if not self.stopped?
+      errors.add(:running, "can not modify while scenario is not stopped")
+      return false
     end
-    unless our_cidr_block_nw.include? min_cloud_size_nw # Unless we're larger than the min nw size
-      errors.add(:cidr_block, "must be larger than #{min_cloud_size_nw}!")
+    if self.scenario.modifiable?
+      self.scenario.update_attribute(:modified, true)
     end
+    true
   end
-  # Validation function that ensures the CIDR block provided is IPV4 and a network.
-  # @return [nil]
-  def cidr_block_is_valid
-    return unless self.cidr_block
-    if IPAddress.valid_ipv4?(self.cidr_block.split('/')[0])
-      # Valid network bits
-      if IPAddress::IPv4.new(self.cidr_block)
-        # Valid cidr block
-        # If it's valid, make sure within provider limits
-        self.cidr_block_is_within_limits
-      end
-    else
-      # Not an IP at all? Generic error! Whoo!
-      errors.add(:cidr_block, "is invalid!")
+
+  def independent_destroy
+    if self.subnets.size > 0
+      errors.add(:dependents, "must not have any subnets")
+      return false
     end
+    self.destroy
+    true
   end
-  # Debug function that adds 1 to this scenario's "cloud_progress", increasing the progress bar on the boot view.
-  # @return [nil]
-  def add_progress
-    PrivatePub.publish_to "/scenarios/#{self.scenario.id}", cloud_progress: 1
+
+  def update_scenario_modified
+    if self.scenario.modifiable?
+      self.scenario.update_attribute(:modified, true)
+    end
+    true
   end
+
+  def bootable?
+    return self.stopped? 
+  end
+
+  def unbootable?
+    return (self.booted? or self.boot_failed? or self.unboot_failed?)
+  end
+
   # @param message The message to print to the {Scenario}'s boot view
   # @return [nil]
   def debug(message)
-    log = self.scenario.log
-    self.scenario.update_attributes(log: log + message + "\n")
-    PrivatePub.publish_to "/scenarios/#{self.id}", log_message: message
+    log = self.log ? self.log : ''
+    message = '' if !message
+    self.update_attribute(:log, log + message + "\n")
   end
+
+  def owner?(id)
+    return self.scenario.user_id == id
+  end
+
+  def ip_taken?(ip)
+    return self.subnets.select{ |subnet| subnet.instances.select{ |instance| instance.ip_address == ip }.size > 0 }.size > 0
+  end
+
+  def subnets_booting?
+    return self.subnets.select{ |s| (s.booting? or s.queued_boot?) }.any?
+  end
+
+  def subnets_unbooting?
+    return self.subnets.select{ |s| s.unbooting? or s.queued_unboot? }.any?
+  end
+
+  def subnets_boot_failed?
+    return self.subnets.select{ |s| s.boot_failed? }.any?
+  end
+
+  def subnets_unboot_failed?
+    return self.subnets.select{ |s| s.unboot_failed? }.any?
+  end
+
+  def subnets_booted?
+    return self.subnets.select{ |s| s.booted? }.any?
+  end
+
+  def subnets_stopped?
+    self.subnets.select{ |s| not s.stopped? }.size == 0
+  end
+
+  def cidr_validate
+
+    # Check for valid CIDR
+    if IPAddress.valid_ipv4?(self.cidr_block.split('/')[0])
+      mask = self.cidr_block.split('/')[1]
+      if not mask
+        errors.add(:cidr_block, "Need a subnet mask")
+        return
+      elsif not /^\d*\d$/.match(mask)
+        errors.add(:cidr_block, "Subnet mask is invalid!")
+        return
+      elsif not (mask.to_i >= MAX_CLOUD_CIDR_BLOCK and mask.to_i <= MIN_CLOUD_CIDR_BLOCK)
+        errors.add(:cidr_block, "Subnet mask must be between #{MAX_CLOUD_CIDR_BLOCK} - #{MIN_CLOUD_CIDR_BLOCK}")
+        return
+      end
+    else
+      # Not an IP at all? Generic error! Whoo!
+      errors.add(:cidr_block, "IP section is invalid!")
+      return
+    end
+
+    # Check that each subnet of cloud is within cloud CIDR
+    self.subnets.each do |subnet|
+      ord = NetAddr::CIDR.create(self.cidr_block).cmp(subnet.cidr_block)
+      puts subnet.cidr_block + " " + ord.to_s
+      if ord != 1 and ord != 0
+        self.errors.add(:cidr_block, "CIDR block does not encompass #{subnet.name}")
+        return
+      end
+    end
+
+  end
+
 end
