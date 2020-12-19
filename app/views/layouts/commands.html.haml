@@ -1,0 +1,7 @@
+- content_for :main do
+  %div.card.card-default
+    %div.card-header
+      %h4 Player Command History
+    %div.card-body
+      = yield
+= render template: 'layouts/application'

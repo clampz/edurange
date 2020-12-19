@@ -1,10 +1,13 @@
+.byebug_history
 *.gem
 *.rbc
+*.swp
+*.swo
 .bundle
 .config
 .idea
 .yardoc
-Gemfile.lock
+.env
 InstalledFiles
 _yardoc
 coverage
@@ -29,11 +32,19 @@ chef/cookbooks/edurange_bootstrap*
 nodes.txt
 players.txt
 vendor/*
+tags
 
 config/settings.local.yml
 config/settings/*.local.yml
 config/environments/*.local.yml
 
+scenarios/custom/*
+
+keys/*
+data/*
+
 .ruby-version
 ._.DS_Store
 .DS_Store
+
+

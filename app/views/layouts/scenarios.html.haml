@@ -1,0 +1,32 @@
+- content_for :main do
+  = render '/scenarios/show/modals'
+  %br
+  %div.card.card-default
+    %h3.card-header.card-title.text-center
+      #scenario-name=@scenario.name
+    %div.card.card-text.current_user
+    %br
+    %ul.nav.nav-tabs.card-header-tabs.justify-content-center
+      %li.nav-item
+        .nav-link.active{class: ('active' if request.path == scenario_path(@scenario))}
+          = link_to('Scenario', scenario_path(@scenario))
+      %li.nav-item
+        .nav-link.active{class: ('active' if request.path == players_scenario_path(@scenario))}
+          = link_to('Players',  players_scenario_path(@scenario))
+      %li.nav-item
+        .nav-link.active{class: ('active' if request.path == scoring_scenario_path(@scenario))}
+          = link_to('Scoring', scoring_scenario_path(@scenario))
+      %li.nav-item
+        .nav-link.active{class: ('active' if request.path == scenario_commands_path(@scenario))}
+          = link_to('Command History', scenario_commands_path(@scenario))
+      %li.nav-item
+        .nav-link.active{class: ('active' if request.path == guide_scenario_path(@scenario))}
+          = link_to('Guide', guide_scenario_path(@scenario))
+      %li.nav-item
+        .nav-link.active{class: ('active' if request.path == instances_scenario_path(@scenario))}
+          = link_to('Instances', instances_scenario_path(@scenario))
+    %div.indent.card-body
+      %br
+      %div
+        = yield
+= render template: 'layouts/application'

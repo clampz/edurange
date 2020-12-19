@@ -1,0 +1,8 @@
+- content_for :main do
+  %div.card.card
+    %div.card-header.card-header-tabs
+      %h3.card-title Documentation
+      = render 'tutorials/tabs'
+    %div.card-body
+      = yield
+= render template: 'layouts/application'

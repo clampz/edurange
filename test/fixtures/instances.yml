@@ -1,0 +1,24 @@
+ip_test_instance:
+  id: 333
+  name: 'ip_test_instance'
+  scenario_id: 3
+
+relations_instance_1:
+  id: 4
+  name: "instance_a_1"
+  scenario_id: 2
+
+relations_instance_2:
+  id: 5
+  name: "instance_a_2"
+  scenario_id: 2
+
+relations_instance_3:
+  id: 6
+  name: "instance_b_3"
+  scenario_id: 2
+
+relations_instance_4:
+  id: 7
+  name: "instance_b_4"
+  scenario_id: 2

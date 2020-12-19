@@ -3,7 +3,8 @@ class StudentGroup < ActiveRecord::Base
   has_many   :student_group_users, dependent: :destroy
   has_many :users, through: :student_group_users
 
-  validates :name, presence: true, uniqueness: { scope: :user, message: "Name taken" } 
+  validates :name, presence: true, uniqueness: { scope: :user, message: "Name taken" }
+  before_save :make_registration_code
 
   # before_destroy :check_if_all
 
@@ -15,16 +16,27 @@ class StudentGroup < ActiveRecord::Base
   # 	true
   # end
 
-  def user_add(user)
-  	student_group_all = self.user.student_groups.find_by_name("All")
-  	if not student_group_all.users.find(user.id)
-  		errors.add(:user, "user not found")
-  		return false
-  	end
+  def registration_code
+    super || user.registration_code
+  end
 
-  	sgu = self.student_group_users.new(user_id: user.id)
-    sgu.save
-  	return sgu
+  def add_users(to_add)
+    to_add = [*to_add]
+    new_to_add = to_add - self.users
+    self.users << new_to_add
+    return new_to_add
+  end
+
+  def remove_users(users)
+    self.users.destroy(users)
+  end
+
+  def make_registration_code
+    if not self.name == "All"
+      if not self.registration_code
+        self.update(registration_code: SecureRandom.hex[0..7])
+      end
+    end
   end
 
 end

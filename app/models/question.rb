@@ -12,11 +12,10 @@ class Question < ActiveRecord::Base
   validate :validate_values
 
   after_create :set_order
-  after_save :update_scenario_modified
 
   TYPES = ["String", "Number", "Essay"]
   # TYPES = ["String", "Number", "Essay", "Event"]
-  OPTIONS_STRING = ["ignore-case"]
+  OPTIONS_STRING = ["ignore-case", "variable-group-player"]
   OPTIONS_NUMBER = ["accept-integer", "accept-decimal", "accept-hex"]
   OPTIONS_ESSAY = ["larger-text-field"]
 
@@ -28,7 +27,7 @@ class Question < ActiveRecord::Base
     end
 
     # check string type
-    if self.type_of == "String"
+    if self.type_of == "String" && self.options != nil
       # check for valid options
       if self.options.select{ |opt| OPTIONS_STRING.include? opt }.size != self.options.size
         errors.add(:options, 'invalid option')
@@ -103,6 +102,25 @@ class Question < ActiveRecord::Base
       end
       return false if err
 
+      # check for extra fields in hash
+      if not (value.size == 2 or value.size == 3)
+        errors.add(:values, "missing or extra fields in value hash #{values}")
+        return false
+      end
+
+      # remove value leading and trailing whitespace
+      value[:value] = value[:value].strip
+
+      # check for special
+      if match_data = /\$.+\$/.match(value[:value])
+        name = match_data.to_s.gsub("$", "")
+        puts self.scenario.instances.size
+        if instance = self.scenario.instances.select { |i| i.name == name }.first
+          value[:special] = value[:value]
+          value[:value] = value[:special].gsub(match_data.to_s, instance.ip_address)
+        end
+      end
+
       # check that points are integers
       if not value[:points].to_i > 0 and value[:points].is_integer?
         errors.add(:values, "points is not zero or positive integer")
@@ -112,15 +130,6 @@ class Question < ActiveRecord::Base
 
       # add points to total
       points_total += value[:points].to_i
-
-      # check for extra fields in hash
-      if value.size != 2
-        errors.add(:values, "extra fields in value hash")
-        return false
-      end
-
-      # remove value leading and trailing whitespace
-      value[:value] = value[:value].strip
 
       # check for duplicate values keep track of values in valuearr
       if self.type_of == "String"
@@ -158,7 +167,7 @@ class Question < ActiveRecord::Base
         accepted = true if value[:value].is_hex?
       end
       if not accepted
-        errors.add(:values, 'value is not in an accepted format see options')
+        errors.add(:values, "value '#{value[:value]}' is not in an accepted format see options")
         return false
       end
     end
@@ -166,7 +175,7 @@ class Question < ActiveRecord::Base
     true
   end
 
-  def set_order
+  def set_order #what do we do for 0 questions?
     if not self.order
       if self.scenario.questions.size == 1
         self.update_attribute(:order, 1)
@@ -174,13 +183,6 @@ class Question < ActiveRecord::Base
         self.update_attribute(:order, self.scenario.questions.maximum("order") + 1)
       end
     end
-  end
-
-  def update_scenario_modified
-    if self.scenario.modifiable?
-      self.scenario.update_attribute(:modified, true)
-    end
-    true
   end
 
   def move_up
@@ -195,7 +197,7 @@ class Question < ActiveRecord::Base
   end
 
   def move_down
-    if below = self.scenario.questions.find_by_order(self.order - 1) 
+    if below = self.scenario.questions.find_by_order(self.order - 1)
       below_order = below.order
       below.update_attribute(:order, self.order)
       self.update_attribute(:order, below_order)
@@ -207,6 +209,9 @@ class Question < ActiveRecord::Base
   end
 
   def answer_string(text, user_id)
+
+    player = scenario.players.find_by(user_id: user_id)
+
     text = text.strip
 
     correct = false
@@ -224,7 +229,14 @@ class Question < ActiveRecord::Base
 
     self.values.each_with_index do |value, i|
 
-      if self.options.include? "ignore case"
+      if self.options.include? "variable-group-player"
+        group_name, var_name = value[:value].split(':')
+        variable = player.variables.find_by_name(var_name)
+        logger.debug("WATWATWAT #{variable.value}")
+        value[:value] = variable.value
+      end
+
+      if self.options.include? "ignore-case"
         self.answers.where("user_id = ?", user_id).each do |answer|
           if answer.text.casecmp(text) == 0
             answer.errors.add(:duplicate, "duplicate answer")
@@ -268,7 +280,6 @@ class Question < ActiveRecord::Base
     end
 
     if text == ""
-      puts "\nBLANKK"
       answer.errors.add(:text, 'can not be blank')
       return answer
     end
@@ -339,7 +350,6 @@ class Question < ActiveRecord::Base
       answer.errors.add(:type_of, "must be type Number")
       return answer
     end
-
     answer.question_id = self.id
     answer.save
     answer

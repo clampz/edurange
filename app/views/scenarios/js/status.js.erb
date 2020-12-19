@@ -44,16 +44,16 @@ update_status('scenario', '<%= @scenario.status %>')
       $("#instance-<%= instance.id %>-delete-button-li").attr('class', '<%= @scenario.stopped? ? "" : "disabled" %>');
       $("#instance-<%= instance.id %>-role-add-button-li").attr('class', '<%= @scenario.stopped? ? "" : "disabled" %>');
 
-      update_status('instance-<%= instance.id %>', '<%= instance.status %>');
-
       $("#instance-<%= instance.id %>-driver").text('<%= instance.driver_id ? instance.driver_id : "not set" %>');
-      <% if instance.internet_accessible %>
-        $("#instance-<%= instance.id %>-public-ip").text('<%= instance.provider_instance_public_ip ? instance.provider_instance_public_ip : "-"  %>');
+      <% if instance.ip_address_public %>
+        $("#instance-<%= instance.id %>-public-ip").text('<%= instance.ip_address_public %>');
       <% end %>
       $("#instance-<%= instance.id %>-driver").text('<%= instance.driver_id ? instance.driver_id : "not set" %>');
       $("#instance-<%= instance.id %>-ssh-ready").text('<%= instance.ssh_ready? ? "true" : "-" %>');
-      $("#instance-<%= instance.id %>-initialized").text('<%= instance.initialized? %>');
-      <% if instance.initialized? == "chef script error" %>
+
+      update_status('instance-<%= instance.id %>', '<%= instance.status %>');
+
+      <% if instance.com.error? %>
         $("#instance-<%= instance.id %>-initialized-error").removeClass('hidden');
       <% else %>
         $("#instance-<%= instance.id %>-initialized-error").addClass('hidden');
@@ -62,6 +62,8 @@ update_status('scenario', '<%= @scenario.status %>')
       <% instance.instance_roles.each do |instance_role| %>
         $("#instance-role-<%= instance_role.id %>-remove-button").attr('class', '<%= instance.stopped? ? "" : "hidden" %>');
       <% end %>
+
+      $("#instance-<%= instance.id %>-ip-address-dynamic-button").attr('class', '<%= instance.stopped? ? "" : "hidden" %>');
 
     <% end %>
   <% end %>
@@ -91,10 +93,4 @@ update_status('scenario', '<%= @scenario.status %>')
       $('<%= escape_javascript(render("/scenarios/show/student_answers", scenario: @scenario, user: student_hash[:student]).delete("\n")).html_safe %>').insertAfter($('#student-<%= student_hash[:student].id %>-answers'));
     }
   <% end %>
-<% end %>
-
-<% if @scenario.queued? or @scenario.booting? or @scenario.unbooting? %>
-  setTimeout(function() { get_scnario_status('<%= @scenario.id %>'); }, 2000);
-<% else %>
-  setTimeout(function() { get_scnario_status('<%= @scenario.id %>'); }, 3000);
 <% end %>

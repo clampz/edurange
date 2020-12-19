@@ -33,6 +33,12 @@ module Edurange
     # config.i18n.default_locale = :de
     config.autoload_paths += %W(#{config.root}/lib)
     config.autoload_paths += Dir["#{config.root}/lib/**/"]
+    config.eager_load_paths += Dir["#{config.root}/lib"]
 
+    # choose provider
+    config.x.provider = 'aws'
+    config.x.aws = config_for(:aws) if config.x.provider == 'aws'
+
+    config.active_job.queue_adapter = :sidekiq
   end
 end

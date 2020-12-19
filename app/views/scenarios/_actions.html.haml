@@ -1,0 +1,32 @@
+%div.btn-group.btn-group-xs
+  = link_to 'Show', scenario_path(scenario), class: 'button#btnFA btn btn-info'
+  - if scenario.can_start?
+    = link_to(start_scenario_path(scenario), method: :post, class: 'button#btnFA btn btn-primary') do
+      %script{:crossorigin => "anonymous", :src => "https://kit.fontawesome.com/c87346ab54.js"}
+      %i.fas.fa-play
+      Start
+  - if scenario.can_restart?
+    = link_to(restart_scenario_path(scenario), method: :post, class: 'btn btn-primary') do
+      %script{:crossorigin => "anonymous", :src => "https://kit.fontawesome.com/c87346ab54.js"}
+      %i.fas.fa-redo
+      Restart
+  - if scenario.can_stop?
+    = link_to(stop_scenario_path(scenario), method: :post, class: 'btn btn-primary') do
+      %script{:crossorigin => "anonymous", :src => "https://kit.fontawesome.com/c87346ab54.js"}
+      %i.fas.fa-stop
+      Stop
+  - if scenario.can_archive?
+    = link_to(archive_scenario_path(scenario), method: :post, class: 'button#btnFA btn btn-secondary') do
+      %script{:crossorigin => "anonymous", :src => "https://kit.fontawesome.com/c87346ab54.js"}
+      %i.fas.fa-eye-slash
+      Archive
+  - if scenario.can_unarchive?
+    = link_to(unarchive_scenario_path(scenario), method: :post, class: 'button#btnFA btn btn-primary') do
+      %script{:crossorigin => "anonymous", :src => "https://kit.fontawesome.com/c87346ab54.js"}
+      %i.fas.fa-eye
+      Unarchive
+  - if scenario.can_destroy?
+    = link_to scenario_path(scenario), method: :delete, remote: true, :data => { :confirm => 'Are you sure?' }, class: 'btn btn-danger' do
+      %script{:crossorigin => "anonymous", :src => "https://kit.fontawesome.com/c87346ab54.js"}
+      %i.fas.fa-trash
+      Destroy

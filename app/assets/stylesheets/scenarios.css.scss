@@ -19,58 +19,16 @@
   margin: 0 10px 10px 10px;
 }
 
-
-
 .stopped {
   color: black;
 }
 
-.paused {
-  color: aqua;
-}
-
-.queued_boot {
-  color: grey;
-}
-
-.queued_unboot {
-  color: grey;
-}
-
-.booted {
+.started {
   color: green;
 }
 
-.boot_failed {
+.error {
   color: red;
-}
-
-.unboot_failed {
-  color: red;
-}
-
-.partially_booted {
-  color: green;
-}
-
-.partially_unbooted {
-  color: green;
-}
-
-.partially_booted_with_failure {
-  color: red;
-}
-
-.partially_unbooted_with_failure {
-  color: red;
-}
-
-.failure {
-  color: red;
-}
-
-table, th, tr, td {
-  border: 1px solid #d0d0d0; 
 }
 
 .indent {

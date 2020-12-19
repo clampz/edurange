@@ -17,16 +17,26 @@ Rails.application.configure do
   config.action_mailer.delivery_method = :smtp
   config.action_mailer.raise_delivery_errors = true
   config.action_mailer.perform_deliveries = true
-  config.action_mailer.default_options = {from: 'no-reply@edurange.org'}
+  config.action_mailer.default_options = {
+    from: 'no-reply@edurange.org'
+  }
+  config.action_mailer.default_url_options = {
+    host: 'edurange.org'
+  }
   config.action_mailer.smtp_settings = {
-    address:                  'smtp.gmail.com',
-    port:                        587,
-    domain:                   'localhost',
-    user_name:              '',
-    password:                 '',
-    authentication:          'plain',
+    address:              ENV['SMTP_ADDRESS'],
+    port:                 587,
+    domain:               ENV['DOMAIN_NAME'],
+    user_name:            ENV['SMTP_USER_NAME'],
+    password:             ENV['SMTP_PASSWORD'],
+    authentication:       'plain',
     enable_starttls_auto: true
   }
+
+  # Rotate log file after 10MB
+  # config.logger = Logger.new("log/#{Rails.env}.log", 50, 10240000)
+
+  config.logger = Logger.new(STDOUT)
 
   # Print deprecation notices to the Rails logger.
   config.active_support.deprecation = :log
@@ -37,7 +47,8 @@ Rails.application.configure do
   # Debug mode disables concatenation and preprocessing of assets.
   # This option may cause significant delays in view rendering with a large
   # number of complex assets.
-  config.assets.debug = false
+  config.assets.debug = true
+  config.sass.cache = false
 
   # Adds additional error checking when serving assets at runtime.
   # Checks for improperly declared sprockets dependencies.

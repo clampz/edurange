@@ -10,14 +10,17 @@
 // Read Sprockets README (https://github.com/sstephenson/sprockets#sprockets-directives) for details
 // about supported directives.
 //
-//= require jquery
+//= require jquery3
+//= require popper
+//= require bootstrap-sprockets
 //= require jquery.turbolinks
 //= require jquery_ujs
+//= require moment
+//= require fullcalendar
 //= require bootstrap
 //= require underscore
-//= require bootstrap
 //= require_tree .
-// require turbolinks
+//= require turbolinks
 
 function update_flash(message) {
     if (!$('#flash_notice').length) {

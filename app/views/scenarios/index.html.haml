@@ -1,78 +1,60 @@
-%div.modal#modal-scenario-destroy{ :tabindex => "-1", :role => "dialog", "aria-labelledby" => "myModalLabel", "aria-hidden" => "true"}
+#modal-scenario-destroy.modal.fade{ :tabindex => "-1", :role => "dialog", "aria-labelledby" => "myModalLabel", "aria-hidden" => "true"}
   %div.modal-dialog
+    %div.modal-header
     %div.modal-content
-      %div.modal-header
-        %button.close{ :type => "button", "data-dismiss" => "modal", "aria-hidden" => "true"}
-          &times;
-        %h3.modal-title.inline#title
-          Changes have been made to the Scenario
+      %h4.modal-title.inline#title
+        Changes have been made to the Scenario. Are you sure you want to destroy?
       %div.modal-body.inline#modalbody
-        
+
       %div.modal-footer
-        %button.btn.btn-default{"data-dismiss" => "modal"}
+        = submit_tag "Destroy", :class => 'btn btn-danger'
+        %button.btn.btn-primary{"data-dismiss" => "modal"}
           Cancel
-
-%div.modal#modal-scenario-custom-new{ :tabindex => "-1", :role => "dialog", "aria-labelledby" => "myModalLabel", "aria-hidden" => "true"}
-  %div.modal-dialog
-    %div.modal-content
-      %div.modal-header
-        %button.close{ :type => "button", "data-dismiss" => "modal", "aria-hidden" => "true"}
-          &times;
-        %h3.modal-title.inline#title
-          Create Custom Scenario
-      %div.modal-body#modalbody
-        = form_tag scenarios_create_custom_path, remote:true, method: :post do
-          %div#name-div
-            = label_tag "Name:", nil, class: 'control-label'
-            = text_field_tag "name", nil, class: 'form-control'
-            %span.help-block#name-help
-          %p
-          %div#help-div
-            %span.help-block#help-help
-
-          = submit_tag "Submit", :class => 'btn btn-default'
-      %div.modal-footer
-        %button.btn.btn-default{"data-dismiss" => "modal"}
-          Close
-
-%div.panel.panel-default
-  %div.panel-heading.nav.nav-pills
-    %li
-      %h4
-        Scenarios:
-    %li
-      &nbsp;&nbsp;
-    %li
-      = link_to 'Load New Scenario', new_scenario_path, class: 'btn btn-default'
-    %li
-      &nbsp;&nbsp;
-    %li
-      = link_to 'Create Custom Scenario', "#modal-scenario-custom-new", :data => {:toggle=>"modal"}, onclick: "$('#modal-scenario-custom-new').find('#name').val(''); $('#modal-scenario-custom-new').find('#name-div').removeClass('has-error'); $('#modal-scenario-custom-new').find('#name-help').html('');", class: 'btn btn-default'
-
-  %div.panel-body
-    %dl
-    %h4
-      %b
-        Current Scenarios:
-    %br
-    %table.table
+%br
+%div.card
+  %h3.card-header.card-title.text-center
+    Scenarios
+  %div.card-body
+    = form_with(method: 'get', class: 'checkbox-inline') do |f|
+      %div.container-fluid
+        %fieldset.form-group
+          - Scenario.statuses.each do |status, value|
+            = f.label nil, class: 'checkbox-inline'
+            = f.check_box :status, {multiple: true, checked: @selected_statuses.include?(status)}, status, false
+            = status
+        .d-inline.mx-auto
+        .form-group.float-left
+          = button_tag(type: 'submit', class: 'btn btn-secondary') do
+            %script{:crossorigin => "anonymous", :src => "https://kit.fontawesome.com/c87346ab54.js"}
+            %i.fas.fa-filter
+            Filter
+        .form-group.text-center
+          = link_to 'Load New Scenario', new_scenario_path, class: 'btn btn-primary'
+  %br
+  %table.table
+    %thead
       %tr
         %th Name
+        %th Date Created
         %th Status
-        - if @user.is_admin?
+        - if current_user.is_admin?
           %th Instructor
-        %th
-
-      - @scenarios.each do |scenario|
+        %th Actions
+    %tbody
+      - if @scenarios.size > 0
+        - @scenarios.each do |scenario|
+          %tr
+            %td= scenario.name
+            %td= scenario.created_at
+            %td= render('scenario_status', scenario: scenario)
+            - if current_user.is_admin?
+              - if scenario.user
+                %td= scenario.user.name
+              - else
+                %td.text-muted None
+            %td
+              = render('actions', scenario: scenario)
+      - else
         %tr
-          %td= scenario.name
-          %td= scenario.status
-          - if @user.is_admin?
-            - if scenario.user_id
-              %td= User.find(scenario.user_id).name
-            - else
-              %td
-          %td
-            %div.btn-group
-              = link_to 'Show', scenario, class: 'btn btn-default'
-              = link_to 'Destroy', destroyme_scenario_path(scenario), method: :post, remote: true, :data => { :confirm => 'Are you sure?' }, class: 'btn btn-danger'
+          %td{colspan: (current_user.is_admin? ? 5 : 4)}
+            There are no scenarios

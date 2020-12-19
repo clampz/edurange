@@ -9,8 +9,8 @@ class StudentsControllerTest < ActionController::TestCase
 	end
 
 	test 'should redirect to home if not logged in' do
-		get :index
-		assert_redirected_to controller: "home", action: "index"
+		get :show
+		assert_redirected_to new_user_session_path
 	end
 
 	test 'should go to index if logged in' do
@@ -24,9 +24,8 @@ class StudentsControllerTest < ActionController::TestCase
 
 		sign_in(u)
 
-		get :index
+		get :show
 		assert_response :success
-		assert_not_nil assigns(:user)
 		assert_not_nil assigns(:scenarios)
 
 		assert assigns(:scenarios).size == 1
@@ -34,12 +33,12 @@ class StudentsControllerTest < ActionController::TestCase
 
 		# make sure links to view each scenario are here
 		assigns(:scenarios).each do |scenario|
-			assert_select "a[href='student/#{scenario.id}']"
+			assert_select "a[href='student/scenarios/#{scenario.id}']"
 		end
 	end
 
 	test 'js' do
-		
+
 	end
 
 end

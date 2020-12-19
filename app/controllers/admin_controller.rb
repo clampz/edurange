@@ -1,22 +1,31 @@
 class AdminController < ApplicationController
-  before_action :authenticate_admin
-  before_action :set_student_group, only: [:student_group_destroy]
+  before_action :authenticate_admin!
 
   def index
-    @instructors = User.where role: 3
-    @students = User.where role: 4
+    @instructors = User.instructors
+    @students = User.students
+
+    # Mark for refactoring
+    begin
+      @aws_vpc_cnt = AWS::EC2.new.vpcs.count
+      @aws_instance_cnt = AWS::EC2.new.instances.count
+      @aws_s3_bucket = "edurange-#{AWS::IAM::Client.new.get_user.user.user_name}"
+    rescue => e
+      @aws_vpc_cnt = nil
+      @aws_instance_cnt = nil
+    end
   end
 
+  # Creates a new instuctor.
   def instructor_create
-    name = params[:name] == '' ? nil : params[:name]
-    @user = User.new(email: params[:email], name: name, organization: params[:organization])
-    password = SecureRandom.hex[0..15]
-    @user.password = password
-    @user.save
+    new_instructor_params = params.permit(:email, :name, :organization)
+    @user = User.new_instructor(new_instructor_params)
 
-    if not @user.errors.any?
-      @user.set_instructor_role
-      @user.email_credentials(password)
+    if @user.valid?
+      @user.save
+      @user.email_credentials(@user.password)
+    else
+      logger.warn("could not create instructor: #{@user.errors.messages}")
     end
 
     respond_to do |format|
@@ -24,6 +33,7 @@ class AdminController < ApplicationController
     end
   end
 
+  # Reset a user's password
   def reset_password
     @user = User.find(params[:id])
     password = SecureRandom.hex[0..15]
@@ -39,18 +49,20 @@ class AdminController < ApplicationController
     end
   end
 
+  # Delete a user
   def user_delete
-    if @user = User.find(params[:id])
-      if @user != User.find(current_user.id)
-        @user.destroy
-      end
+    @users = [*User.find(params[:id])]
+
+    @users.each do |user|
+      user.destroy unless user.id == current_user.id
     end
-    
+
     respond_to do |format|
       format.js { render 'admin/js/user_delete.js.erb', :layout => false }
     end
   end
 
+  # Promote a student to an instructor
   def student_to_instructor
     if @user = User.find(params[:id])
       if not @user.is_student?
@@ -65,81 +77,34 @@ class AdminController < ApplicationController
     end
   end
 
+  # Add all students to a group
   def student_add_to_all
-    if @user = User.find(params[:id])
-      if not @user.is_student?
-        @user.errors.add(:email, "User is not a student")
-      else
-        @student_group, @student_group_user = User.find(current_user.id).student_add_to_all(@user)
-      end
-    end
+    users_to_add = User.find(params[:id])
+    added_users  = current_user.student_group_all.add_users(users_to_add)
 
     respond_to do |format|
-      format.js { render 'admin/js/student_add_to_all.js.erb', :layout => false }
+      format.js { render 'student_groups/js/add_users.js.erb', :layout => false, locals: { student_group: current_user.student_group_all, added_users: added_users } }
     end
   end
 
+
+  # Demote an instructor to a student
   def instructor_to_student
-    if @user = User.find(params[:id])
-      if not @user.is_instructor?
-        @user.errors.add(:email, "User is not a student")
+    if user = User.find(params[:id])
+      if not user.is_instructor?
+        user.errors.add(:email, "User is not an instructor")
       else
-        @student_group, @student_group_user = @user.instructor_to_student(User.find(current_user.id))
+        user.instructor_to_student(current_user)
       end
     end
 
     respond_to do |format|
-      format.js { render 'admin/js/instructor_to_student.js.erb', :layout => false }
-    end
-  end
-
-  def student_group_create
-    @user = User.find(current_user.id)
-    @student_group = @user.student_groups.new(name: params[:name])
-    @student_group.save
-
-    respond_to do |format|
-      format.js { render 'admin/js/student_group_create.js.erb', :layout => false }
-    end
-  end
-
-  def student_group_destroy
-    @student_group.destroy
-    respond_to do |format|
-      format.js { render 'admin/js/student_group_delete.js.erb', :layout => false }
-    end
-  end
-
-  def student_group_user_add
-    user = User.find(params[:user_id])
-    @student_group_user = nil
-    if @student_group = @user.student_groups.find_by_name(params[:student_group_name])
-      @student_group_user = @student_group.user_add(user)
-    end
-
-    respond_to do |format|
-      format.js { render 'admin/js/student_group_user_add.js.erb', :layout => false }
-    end
-  end
-
-  def student_group_user_remove
-    @student_group_user = StudentGroupUser.find(params[:student_group_user_id])
-    if @student_group_user.student_group.user == User.find(current_user.id)
-      @student_group_user.destroy
-    end
-
-    respond_to do |format|
-      format.js { render 'admin/js/student_group_user_remove.js.erb', :layout => false }
-    end
-  end
-
-  private
-
-  def set_student_group
-    @student_group = StudentGroup.find(params[:student_group_id])
-    if not User.find(current_user.id).owns? @student_group
-      head :ok, content_type: "text/html"
-      return
+      format.js {
+        render 'admin/js/instructor_to_student.js.erb', :layout => false , locals: {
+          student_group: current_user.student_group_all,
+          user: user
+        }
+      }
     end
   end
 
